@@ -4,10 +4,11 @@ import logging
 import voluptuous as vol
 
 from homeassistant.components.switch import SwitchDevice, PLATFORM_SCHEMA
-from homeassistant.const import CONF_NAME, CONF_HOST
+from homeassistant.const import CONF_NAME, CONF_HOST, CONF_TOKEN
 import homeassistant.helpers.config_validation as cv
 
 DEFAULT_NAME = "myStrom Switch"
+DEFAULT_TOKEN = ''
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_HOST): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+        vol.Optional(CONF_TOKEN, default = DEFAULT_TOKEN): cv.string,
     }
 )
 
@@ -25,27 +27,29 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     name = config.get(CONF_NAME)
     host = config.get(CONF_HOST)
+    token = config.get(CONF_TOKEN)
 
     try:
-        MyStromPlug(host).get_status()
+        MyStromPlug(host, token).get_status()
     except exceptions.MyStromConnectionError:
         _LOGGER.error("No route to device: %s", host)
         return
 
-    add_entities([MyStromSwitch(name, host)])
+    add_entities([MyStromSwitch(name, host, token)])
 
 
 class MyStromSwitch(SwitchDevice):
     """Representation of a myStrom switch."""
 
-    def __init__(self, name, resource):
+    def __init__(self, name, resource, token):
         """Initialize the myStrom switch."""
         from pymystrom.switch import MyStromPlug
 
         self._name = name
         self._resource = resource
+        self._token =token
         self.data = {}
-        self.plug = MyStromPlug(self._resource)
+        self.plug = MyStromPlug(self._resource, self._token)
         self.update()
 
     @property
